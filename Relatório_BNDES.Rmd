@@ -1,0 +1,155 @@
+---
+title: "Operações de financiamento do Banco Nacional de Desenvolvimento(BNDES)"
+author: "Mateus Henrique de Souza"
+
+output: 
+        prettydoc::pdf_pretty:
+          theme: cayman
+          highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Operações indiretas não automáticas
+
+
+  Relatorio sobre operações de financiamento que não foram aprovadas automaticamente pelo BNDES
+e passaram por analise manual dos analistas desde 2002
+
+  Operações contratadas diretamente com o BNDES e operações contratadas via agente financeiro (indiretas) que foram revisadas por analistas do BNDES. 
+  O critério principal para que seja feita análise manual de operações indiretas é o valor. Na tabela abaixo segue os dez maiores contratos de financiamento do BNDES
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(knitr)
+
+
+options(scipen = 999)
+
+bndes <- read_csv2("C:/Users/mateu/Downloads/operacoes_n_automaticas.csv")
+
+bndes %>% 
+  arrange(desc(valor_contratado_reais)) %>% 
+  mutate(valor_formatado = paste("R$", format(valor_contratado_reais,                  decimal.mark = ",", big.mark = ".", nsmall = 2))) %>% 
+  select(Clientes = cliente , Contratos = valor_formatado) %>% 
+  slice(1:10) %>% 
+  kable()
+
+
+
+```
+
+Operações indiretas são contratadas através de um Agente Financeiro que avalia o crédito do cliente, cobra um spread acima da taxa do BNDES e assume os riscos da operação.
+  A seguir o total de financiamentos que os maiores clientes ja receberam em operações não automaticas
+  
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+bndes %>%
+  group_by(cliente) %>%
+  summarise(total_cliente = sum(valor_contratado_reais)) %>%
+  arrange(desc(total_cliente)) %>%
+  slice(1:8) %>%
+  mutate(cliente = forcats::fct_reorder(cliente, total_cliente)) %>%
+   ggplot() +
+  geom_col(aes(x = total_cliente, y = cliente, fill = cliente),
+           show.legend = FALSE) +
+  geom_label(aes(x = total_cliente/2 , y = cliente, label = total_cliente)) +
+    labs(x = "total de financiamento($)",
+    title = "8 maiores tomadores 
+               de empréstimo ",
+    caption = "Fonte: BNDES"
+    
+  ) +
+  coord_cartesian(ylim = c(0, 10)) +
+  ggthemr::ggthemr("fresh")$theme
+
+  grafico <- bndes %>% 
+  mutate(ano = lubridate::year(data_da_contratacao)) %>% 
+  group_by(ano) %>% 
+  summarise(total_ano = sum(valor_contratado_reais)) %>% 
+  mutate(total_ano = total_ano) %>% 
+  ggplot(aes(x = ano, y = total_ano)) +
+  geom_line() +
+  geom_point() 
+```
+
+  Para se tornar cliente do BNDES, as empresas passam por um processo de habilitação no qual é verificada a sua boa conduta socioambiental por meio de consulta a listas públicas ou outros meios oficiais. Isso inclui verificar apontamentos referentes a trabalho análogo a escravo, crimes ambientais, áreas embargadas pelo IBAMA e débitos junto a órgão de fiscalização.
+
+  Caso sejam identificados apontamentos que desabonem a empresa, ela pode ser impedida de operar com o BNDES.
+
+## Evolução dos valores financiados por ano
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ 
+  plotly::ggplotly(grafico)
+  
+
+
+```
+
+As informações são apuradas de acordo com os registros constantes nos sistemas corporativos do BNDES na data de apuração. Cabe esclarecer que eventualmente há defasagem entre a data da efetiva assinatura do contrato e a data do seu registro nos sistemas corporativos.
+
+Caso haja cancelamento integral de uma operação divulgada, a mesma será excluída do universo dos dados na próxima divulgação.
+
+## Subsídios
+  
+  Com uma taxa média de 2,84% de juros ao ano e prazo médio de carência de 20,7 meses começamos a nos perguntar até que ponto acaba sendo necessário o BNDES financiar essas.
+  Entre as variaveis de classificação dos projetos a serem contemplados existe a classe de inovação com duas alternativas 'Sim' e 'Não', o gráfico a seguir ilustra bem este questionamento, até que ponto seria viavel a sociedade arcar com esses custos.
+  
+
+
+```{r fig.align='center', echo=FALSE, message=FALSE, warning=FALSE}
+  bndes %>% 
+  group_by(inovacao) %>% 
+  count() %>% 
+  ggplot() +
+  geom_col(aes(x = inovacao, y = n)) +
+  geom_label(aes(x = inovacao , y = n/2, label = n)) +
+  ggthemr::ggthemr("fresh")$theme +
+  labs( x = "Inovação",
+              title = "Grafico de Inovação",
+        subtitle = "Classificação de projetos em inovador ou não")
+
+```
+  
+
+## Tamanho das empresas
+
+  
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+
+bndes %>% 
+  group_by(porte_do_cliente) %>% 
+  count() %>% 
+  mutate(porte_do_cliente = forcats::fct_reorder(porte_do_cliente, n)) %>% 
+  ggplot() +
+  geom_col(aes(x = porte_do_cliente, y = n)) +
+  geom_label(aes(x = porte_do_cliente , y = n/2, label = n)) +
+  ggthemr::ggthemr("dust")$theme +
+  labs( 
+         
+        title = "Número de contratos x tamanho das empresas financiadas")
+
+
+
+```
+  
+    
+  Outro ponto que nos salta aos olhos diz respeito ao porte das empresas beneficiadas, estas que poderiam se financiar via mercado,
+deixo aqui esta reflexão até que ponto é positivo um banco público aportar grandes empresas e contribuir para monopolização do mercado em detrimento do pagador de impostos.
+
+
+
+### Referências
+
+  Fonte: https://dadosabertos.bndes.gov.br/dataset/0f335c85-92a8-4343-9423-f073fb40774e/resource/332d446e-d340-46ef-af64-ee6f36e7bd50/download/operacoes-financiamento-operacoes-nao-automaticas.csv
+
+
+```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE}
+knitr::include_graphics("https://www.humordido.net/wp-content/uploads/2016/02/seibem.gif")
+                                  
+
+
+
+```
+
